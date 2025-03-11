@@ -1,7 +1,12 @@
 import { Module } from '@nestjs/common';
+import { PrismaModule } from './prisma/prisma.module';
+import { ProfessorsModule } from './professors/professors.module';
 
 @Module({
-  imports: [],
+  imports: [
+    PrismaModule,
+    ProfessorsModule,
+  ],
   controllers: [],
   providers: [],
 })
