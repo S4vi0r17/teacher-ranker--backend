@@ -1,0 +1,187 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User Model
+model User {
+  id                Int       @id @default(autoincrement()) @map("ID_User")
+  fullName          String
+  username          String    @unique
+  email             String    @unique
+  password          String
+  createdAt         DateTime  @default(now())
+  verificationStatus Boolean  @default(false)
+  accountStatus     String    @default("active") // active/banned
+  
+  // Relations
+  university        University? @relation(fields: [universityId], references: [id])
+  universityId      Int?
+  reviews           Review[]
+
+  @@map("users")
+}
+
+// Professor Model
+model Professor {
+  id                Int       @id @default(autoincrement()) @map("ID_Professor")
+  fullName          String
+  averageRating     Float     @default(0)
+  reviewCount       Int       @default(0)
+  
+  // Relations
+  universities      ProfessorUniversity[]
+  faculties         ProfessorFaculty[]
+  courses           ProfessorCourse[]
+  reviews           Review[]
+  tags              ProfessorTag[]
+
+  @@map("professors")
+}
+
+// University Model
+model University {
+  id                      Int       @id @default(autoincrement()) @map("ID_University")
+  name                    String
+  acronym                 String?
+  location                String?
+  department              String?
+  totalProfessorsCount    Int       @default(0)
+  generalAverageRating    Float     @default(0)
+  
+  // Relations
+  professors              ProfessorUniversity[]
+  faculties               Faculty[]
+  users                   User[]
+
+  @@map("universities")
+}
+
+// Faculty Model
+model Faculty {
+  id                Int       @id @default(autoincrement()) @map("ID_Faculty")
+  name              String
+  
+  // Relations
+  university        University @relation(fields: [universityId], references: [id])
+  universityId      Int
+  professors        ProfessorFaculty[]
+
+  @@map("faculties")
+}
+
+// Course Model
+model Course {
+  id                Int       @id @default(autoincrement()) @map("ID_Course")
+  name              String
+  
+  // Relations
+  professors        ProfessorCourse[]
+  reviews           Review[]
+
+  @@map("courses")
+}
+
+// Review Model
+model Review {
+  id                  Int       @id @default(autoincrement()) @map("ID_Review")
+  overallRating       Float
+  teachingQuality     Float
+  difficultyLevel     Float
+  mandatoryAttendance Boolean
+  classInterest       Float
+  detailedComment     String?   @db.Text
+  gradeObtained       String?
+  createdAt           DateTime  @default(now())
+  visibilityStatus    String    @default("visible") // visible/hidden
+  reportStatus        String    @default("normal") // normal/reported
+  
+  // Relations
+  user                User      @relation(fields: [userId], references: [id])
+  userId              Int
+  professor           Professor @relation(fields: [professorId], references: [id])
+  professorId         Int
+  course              Course    @relation(fields: [courseId], references: [id])
+  courseId            Int
+
+  @@map("reviews")
+  @@unique([userId, professorId]) // A user can only have one review per professor
+}
+
+// Administrator Model
+model Administrator {
+  id                Int       @id @default(autoincrement()) @map("ID_Admin")
+  username          String    @unique
+  password          String
+  accessLevel       String    @default("normal") // normal/superadmin
+
+  @@map("administrators")
+}
+
+// Tag Model
+model Tag {
+  id                Int       @id @default(autoincrement()) @map("ID_Tag")
+  name              String    @unique
+  type              String    // professor/course
+  
+  // Relations
+  professors        ProfessorTag[]
+
+  @@map("tags")
+}
+
+// Intermediate tables for N:M relations
+
+// Professor-University Relation
+model ProfessorUniversity {
+  professor         Professor  @relation(fields: [professorId], references: [id])
+  professorId       Int
+  university        University @relation(fields: [universityId], references: [id])
+  universityId      Int
+
+  @@id([professorId, universityId])
+  @@map("professor_university")
+}
+
+// Professor-Faculty Relation
+model ProfessorFaculty {
+  professor         Professor  @relation(fields: [professorId], references: [id])
+  professorId       Int
+  faculty           Faculty    @relation(fields: [facultyId], references: [id])
+  facultyId         Int
+
+  @@id([professorId, facultyId])
+  @@map("professor_faculty")
+}
+
+// Professor-Course Relation
+model ProfessorCourse {
+  professor         Professor  @relation(fields: [professorId], references: [id])
+  professorId       Int
+  course            Course     @relation(fields: [courseId], references: [id])
+  courseId          Int
+
+  @@id([professorId, courseId])
+  @@map("professor_course")
+}
+
+// Professor-Tag Relation
+model ProfessorTag {
+  professor         Professor  @relation(fields: [professorId], references: [id])
+  professorId       Int
+  tag               Tag        @relation(fields: [tagId], references: [id])
+  tagId             Int
+
+  @@id([professorId, tagId])
+  @@map("professor_tag")
+}

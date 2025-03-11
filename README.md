@@ -1,98 +1,259 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Teacher Ranker - Backend
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+Este es el backend para la aplicación Teacher Ranker, una plataforma que permite a los estudiantes calificar y revisar a sus profesores universitarios.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Estructura de la Base de Datos
 
-## Description
+El proyecto utiliza Prisma ORM con PostgreSQL. La estructura de la base de datos incluye las siguientes entidades principales:
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+### Entidades Principales
 
-## Project setup
+- **User**: Usuarios de la plataforma
+- **Professor**: Profesores que pueden ser calificados
+- **University**: Universidades a las que pertenecen los profesores y usuarios
+- **Faculty**: Facultades dentro de las universidades
+- **Course**: Cursos impartidos por los profesores
+- **Review**: Reseñas y calificaciones de los profesores
+- **Administrator**: Administradores del sistema
+- **Tag**: Etiquetas para categorizar profesores y cursos
 
-```bash
-$ yarn install
+### Relaciones
+
+- Un profesor puede pertenecer a varias universidades y facultades
+- Un profesor puede impartir varios cursos
+- Un usuario puede crear múltiples reseñas (máximo una por profesor)
+- Una universidad tiene muchas facultades
+- Un usuario pertenece a una universidad
+
+### Diagrama de la Base de Datos
+
+```mermaid
+erDiagram
+    User {
+        int id PK
+        string fullName
+        string username UK
+        string email UK
+        string password
+        datetime createdAt
+        boolean verificationStatus
+        string accountStatus
+        int universityId FK
+    }
+
+    Professor {
+        int id PK
+        string fullName
+        float averageRating
+        int reviewCount
+    }
+
+    University {
+        int id PK
+        string name
+        string acronym
+        string location
+        string department
+        int totalProfessorsCount
+        float generalAverageRating
+    }
+
+    Faculty {
+        int id PK
+        string name
+        int universityId FK
+    }
+
+    Course {
+        int id PK
+        string name
+    }
+
+    Review {
+        int id PK
+        float overallRating
+        float teachingQuality
+        float difficultyLevel
+        boolean mandatoryAttendance
+        float classInterest
+        string detailedComment
+        string gradeObtained
+        datetime createdAt
+        string visibilityStatus
+        string reportStatus
+        int userId FK
+        int professorId FK
+        int courseId FK
+    }
+
+    Administrator {
+        int id PK
+        string username UK
+        string password
+        string accessLevel
+    }
+
+    Tag {
+        int id PK
+        string name UK
+        string type
+    }
+
+    ProfessorUniversity {
+        int professorId PK,FK
+        int universityId PK,FK
+    }
+
+    ProfessorFaculty {
+        int professorId PK,FK
+        int facultyId PK,FK
+    }
+
+    ProfessorCourse {
+        int professorId PK,FK
+        int courseId PK,FK
+    }
+
+    ProfessorTag {
+        int professorId PK,FK
+        int tagId PK,FK
+    }
+
+    User ||--o{ Review : "creates"
+    User }o--|| University : "belongs to"
+    Professor ||--o{ Review : "receives"
+    Professor ||--o{ ProfessorUniversity : "belongs to"
+    Professor ||--o{ ProfessorFaculty : "belongs to"
+    Professor ||--o{ ProfessorCourse : "teaches"
+    Professor ||--o{ ProfessorTag : "has"
+    University ||--o{ ProfessorUniversity : "has"
+    University ||--o{ Faculty : "has"
+    Faculty ||--o{ ProfessorFaculty : "has"
+    Course ||--o{ ProfessorCourse : "has"
+    Course ||--o{ Review : "is rated in"
+    Tag ||--o{ ProfessorTag : "categorizes"
 ```
 
-## Compile and run the project
+## Requisitos Previos
+
+- Node.js (v16 o superior)
+- PostgreSQL
+- Yarn o npm
+
+## Configuración del Proyecto
+
+1. Clona el repositorio:
 
 ```bash
-# development
-$ yarn run start
-
-# watch mode
-$ yarn run start:dev
-
-# production mode
-$ yarn run start:prod
+git clone https://github.com/S4vi0r17/teacher-ranker--backend.git
+cd teacher-ranker--backend
 ```
 
-## Run tests
+2. Instala las dependencias:
 
 ```bash
-# unit tests
-$ yarn run test
-
-# e2e tests
-$ yarn run test:e2e
-
-# test coverage
-$ yarn run test:cov
+yarn install
 ```
 
-## Deployment
+3. Configura las variables de entorno:
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+   - Crea un archivo `.env` en la raíz del proyecto
+   - Añade la URL de conexión a tu base de datos PostgreSQL:
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+   ```
+   DATABASE_URL="postgresql://usuario:contraseña@localhost:5432/teacher_ranker_db?schema=public"
+   ```
+
+4. Genera el cliente Prisma:
 
 ```bash
-$ yarn install -g mau
-$ mau deploy
+yarn prisma generate
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+5. Ejecuta las migraciones para crear la estructura de la base de datos:
 
-## Resources
+```bash
+yarn prisma migrate dev --name init
+```
 
-Check out a few resources that may come in handy when working with NestJS:
+## Gestión de la Base de Datos
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+### Resetear la Base de Datos
 
-## Support
+Para eliminar todos los datos y recrear la estructura de la base de datos:
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+```bash
+yarn db:reset
+```
 
-## Stay in touch
+Este comando:
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+- Elimina todas las tablas existentes
+- Recrea la estructura de la base de datos según el esquema de Prisma
+- Prepara la base de datos para ser poblada con datos de prueba
 
-## License
+### Poblar la Base de Datos con Datos de Prueba
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+Para insertar datos de prueba en la base de datos:
+
+```bash
+yarn db:seed
+```
+
+Este comando:
+
+- Elimina cualquier dato existente
+- Reinicia las secuencias de autoincremento
+- Inserta datos de prueba para todas las entidades
+- Crea relaciones entre las entidades
+- Actualiza estadísticas como promedios de calificaciones
+
+## Ejecutar el Proyecto
+
+````bash
+# Modo desarrollo
+yarn start:dev
+
+# Modo producción
+yarn start:prod
+
+## Estructura del Proyecto
+
+- `prisma/`: Contiene el esquema de Prisma y scripts relacionados con la base de datos
+  - `schema.prisma`: Define la estructura de la base de datos
+  - `seed.sql`: Script SQL para poblar la base de datos con datos de prueba
+  - `seed.js`: Script Node.js para ejecutar el seed SQL
+  - `reset-db.js`: Script para resetear completamente la base de datos
+
+- `src/`: Código fuente de la aplicación
+  - `controllers/`: Controladores de la API
+  - `services/`: Servicios de negocio
+  - `dto/`: Objetos de transferencia de datos
+  - `entities/`: Entidades del dominio
+  - `middleware/`: Middleware personalizado
+
+## Comandos Disponibles
+
+```bash
+# Iniciar en modo desarrollo
+yarn start:dev
+
+# Compilar el proyecto
+yarn build
+
+# Ejecutar pruebas
+yarn test
+
+# Ejecutar pruebas e2e
+yarn test:e2e
+
+# Resetear la base de datos
+yarn db:reset
+
+# Poblar la base de datos con datos de prueba
+yarn db:seed
+````
+
+## Licencia
+
+No sé
